@@ -239,5 +239,9 @@ service cloud.firestore {
       allow update: if isAgencyMember(resource.data.ownerId) && isValidUnmatchedRecord(request.resource.data) && request.resource.data.ownerId == resource.data.ownerId;
       allow delete: if isAgencyMember(resource.data.ownerId);
     }
+
+    match /test/{docId} {
+      allow read: if true;
+    }
   }
 }
