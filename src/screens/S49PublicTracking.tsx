@@ -33,19 +33,31 @@ export const S49PublicTracking: React.FC = () => {
 
   // Auto-run lookup if a tracking ID was passed in URL or selection
   useEffect(() => {
-    // Check URL parameters, pathname, or hash
     const params = new URLSearchParams(window.location.search);
-    const urlId =
-      params.get("id") ||
-      params.get("tracking") ||
-      window.location.hash.replace("#/track/", "").replace("#", "") ||
-      "";
+    const rawPath = window.location.pathname
+      .replace(/^\/track\/?/i, "")
+      .replace(/^\/+/, "")
+      .replace(/\/+$/, "")
+      .trim();
+    const pathId =
+      rawPath && rawPath.toLowerCase() !== "index.html" ? rawPath : "";
+    const hashId = window.location.hash
+      .replace(/^#\/track\/?/i, "")
+      .replace(/^#\/?/, "")
+      .trim();
 
-    const targetId = (selectedShipmentId || urlId).trim();
-    if (targetId && targetId !== "invalid") {
-      setQueryInput(targetId);
-      setSearchedId(targetId);
-      handleExecuteSearch(targetId);
+    const urlId =
+      params.get("id") || params.get("tracking") || pathId || hashId || "";
+
+    const rawTarget = (selectedShipmentId || urlId).replace(/^\/+/, "").trim();
+    if (
+      rawTarget &&
+      rawTarget.toLowerCase() !== "invalid" &&
+      rawTarget.toLowerCase() !== "index.html"
+    ) {
+      setQueryInput(rawTarget.toUpperCase());
+      setSearchedId(rawTarget.toUpperCase());
+      handleExecuteSearch(rawTarget);
     }
   }, [selectedShipmentId]);
 
@@ -362,19 +374,18 @@ export const S49PublicTracking: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-center pt-4">
-          {matchedShipment && isWhiteLabeled && companyName ? (
-            <span className="text-[12px] font-medium text-[var(--muted)]">
-              {companyName} Tracking
+        <div className="flex flex-col items-center justify-center gap-1 pt-4">
+          {matchedShipment && isWhiteLabeled && companyName && (
+            <span className="text-[12px] font-semibold text-[var(--ink)]">
+              Official Tracking · {companyName}
             </span>
-          ) : (
-            <div className="flex items-center gap-1.5 opacity-60">
-              <span className="text-[12px] font-medium text-[var(--muted)]">
-                Powered by
-              </span>
-              <Logo size={14} showWordmark={true} />
-            </div>
           )}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[12px] font-medium text-[var(--muted)]">
+              Powered by
+            </span>
+            <Logo size={16} showWordmark={true} />
+          </div>
         </div>
       </div>
     </ScreenLayout>

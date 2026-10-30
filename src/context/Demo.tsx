@@ -436,11 +436,20 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const hash = window.location.hash;
 
       if (hostname.startsWith("track.") || pathname.startsWith("/track")) {
-        // Read tracking id from path (e.g. /track/SHP-1001), query, or hash
-        const pathPart = pathname.replace(/^\/track\/?/, "").trim();
-        const hashPart = hash.replace(/^#\/track\/?/, "").replace(/^#/, "").trim();
+        // Read tracking id from path (e.g. /SHP-1001 or /track/SHP-1001), query, or hash
+        const rawPath = pathname
+          .replace(/^\/track\/?/, "")
+          .replace(/^\/+/, "")
+          .replace(/\/+$/, "")
+          .trim();
+        const pathPart =
+          rawPath && rawPath !== "index.html" ? rawPath : "";
+        const hashPart = hash
+          .replace(/^#\/track\/?/, "")
+          .replace(/^#\/?/, "")
+          .trim();
         const params = new URLSearchParams(window.location.search);
-        const queryId = params.get("id") || params.get("tracking") || "";
+        const queryId = (params.get("id") || params.get("tracking") || "").trim();
         const targetId = (pathPart || hashPart || queryId).toUpperCase();
 
         if (targetId && targetId !== "INVALID") {
