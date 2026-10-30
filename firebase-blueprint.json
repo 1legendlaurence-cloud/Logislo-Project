@@ -1,0 +1,198 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user profile, agency configuration, active role, white-label settings, and subscription plan.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "agencyId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "maxLength": 120 },
+        "email": { "type": "string", "format": "email", "maxLength": 160 },
+        "whatsapp": { "type": "string", "maxLength": 40 },
+        "agencyName": { "type": "string", "maxLength": 120 },
+        "agencyLogoUrl": { "type": "string", "maxLength": 150000 },
+        "whiteLabelEnabled": { "type": "boolean" },
+        "currency": { "type": "string", "maxLength": 16 },
+        "role": { "type": "string", "enum": ["Owner", "Manager", "Front desk", "Warehouse worker"], "maxLength": 32 },
+        "plan": { "type": "string", "enum": ["Basic", "Pro"], "maxLength": 16 },
+        "waitlistJoined": { "type": "boolean" }
+      },
+      "required": ["ownerId", "name", "email", "agencyName", "currency", "role", "plan"]
+    },
+    "RouteConfig": {
+      "title": "RouteConfig",
+      "description": "Freight forwarding route and pricing settings.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "maxLength": 120 },
+        "fromCountry": { "type": "string", "maxLength": 64 },
+        "fromCity": { "type": "string", "maxLength": 64 },
+        "toCountry": { "type": "string", "maxLength": 64 },
+        "toCity": { "type": "string", "maxLength": 64 },
+        "pricePerKg": { "type": "number" },
+        "pricePerCbm": { "type": "number" },
+        "depositPct": { "type": "number" },
+        "gzFreeDays": { "type": "number" },
+        "gzDailyFee": { "type": "number" },
+        "dlaFreeDays": { "type": "number" },
+        "dlaDailyFee": { "type": "number" }
+      },
+      "required": ["id", "ownerId", "name", "fromCountry", "fromCity", "toCountry", "toCity", "pricePerKg", "pricePerCbm", "depositPct"]
+    },
+    "StaffMember": {
+      "title": "StaffMember",
+      "description": "Staff member belonging to an agency.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "agencyName": { "type": "string", "maxLength": 120 },
+        "name": { "type": "string", "maxLength": 120 },
+        "role": { "type": "string", "enum": ["Owner", "Manager", "Front desk", "Warehouse worker"], "maxLength": 32 },
+        "office": { "type": "string", "maxLength": 64 },
+        "whatsapp": { "type": "string", "maxLength": 40 },
+        "email": { "type": "string", "maxLength": 160 },
+        "customTitle": { "type": "string", "maxLength": 80 },
+        "status": { "type": "string", "enum": ["Active", "Inactive"], "maxLength": 16 },
+        "tempPassword": { "type": "string", "maxLength": 32 }
+      },
+      "required": ["id", "ownerId", "name", "role", "office", "whatsapp", "email", "status"]
+    },
+    "ClientRecord": {
+      "title": "ClientRecord",
+      "description": "Agency client receiving freight shipments.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "maxLength": 120 },
+        "code": { "type": "string", "maxLength": 32 },
+        "city": { "type": "string", "maxLength": 64 },
+        "whatsapp": { "type": "string", "maxLength": 40 },
+        "email": { "type": "string", "maxLength": 160 },
+        "shipmentCount": { "type": "number" },
+        "balance": { "type": "number" }
+      },
+      "required": ["id", "ownerId", "name", "code", "city", "whatsapp", "shipmentCount", "balance"]
+    },
+    "ShipmentRecord": {
+      "title": "ShipmentRecord",
+      "description": "Freight shipment tracked from warehouse reception to release.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "agencyName": { "type": "string", "maxLength": 120 },
+        "agencyLogoUrl": { "type": "string", "maxLength": 150000 },
+        "whiteLabelEnabled": { "type": "boolean" },
+        "clientName": { "type": "string", "maxLength": 120 },
+        "clientCode": { "type": "string", "maxLength": 32 },
+        "route": { "type": "string", "maxLength": 120 },
+        "boxes": { "type": "number" },
+        "cbm": { "type": "number" },
+        "weightKg": { "type": "number" },
+        "status": { "type": "string", "maxLength": 32 },
+        "description": { "type": "string", "maxLength": 240 },
+        "supplierTracking": { "type": "string", "maxLength": 80 },
+        "trackingLink": { "type": "string", "maxLength": 240 },
+        "shippingFee": { "type": "number" },
+        "depositFee": { "type": "number" },
+        "storageFee": { "type": "number" },
+        "balance": { "type": "number" },
+        "collectorName": { "type": "string", "maxLength": 120 },
+        "dateLabel": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "ownerId", "clientName", "clientCode", "route", "boxes", "status", "trackingLink", "shippingFee", "depositFee", "storageFee", "balance"]
+    },
+    "ContainerRecord": {
+      "title": "ContainerRecord",
+      "description": "Shipping container consolidating multiple client shipments.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "number": { "type": "string", "maxLength": 64 },
+        "size": { "type": "string", "enum": ["20ft", "40ft"], "maxLength": 16 },
+        "route": { "type": "string", "maxLength": 120 },
+        "boxes": { "type": "number" },
+        "status": { "type": "string", "enum": ["Open", "In transit", "Arrived"], "maxLength": 32 },
+        "cost": { "type": "number" },
+        "profit": { "type": "number" },
+        "shipmentIds": { "type": "string", "maxLength": 1000 }
+      },
+      "required": ["id", "ownerId", "number", "size", "route", "boxes", "status"]
+    },
+    "PaymentRecord": {
+      "title": "PaymentRecord",
+      "description": "Recorded payment for deposit, balance, or storage fee.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "shipmentId": { "type": "string", "maxLength": 128 },
+        "clientName": { "type": "string", "maxLength": 120 },
+        "type": { "type": "string", "enum": ["Deposit", "Balance", "Storage", "Paid", "Credit"], "maxLength": 32 },
+        "method": { "type": "string", "enum": ["Cash", "Mobile money"], "maxLength": 32 },
+        "amount": { "type": "number" },
+        "remaining": { "type": "number" },
+        "date": { "type": "string", "maxLength": 64 },
+        "recordedBy": { "type": "string", "maxLength": 80 },
+        "reference": { "type": "string", "maxLength": 120 }
+      },
+      "required": ["id", "ownerId", "shipmentId", "type", "method", "amount", "date", "recordedBy"]
+    },
+    "UnmatchedRecord": {
+      "title": "UnmatchedRecord",
+      "description": "Unmatched warehouse cargo awaiting assignment to a shipment.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "boxes": { "type": "number" },
+        "cbm": { "type": "number" },
+        "weightKg": { "type": "number" },
+        "date": { "type": "string", "maxLength": 64 },
+        "route": { "type": "string", "maxLength": 120 },
+        "markings": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["id", "ownerId", "boxes", "date"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Stores user profile, role, plan, and agency settings."
+    },
+    "/routes/{routeId}": {
+      "schema": "RouteConfig",
+      "description": "Stores freight forwarding routes and pricing."
+    },
+    "/staff/{staffId}": {
+      "schema": "StaffMember",
+      "description": "Stores agency staff members."
+    },
+    "/clients/{clientId}": {
+      "schema": "ClientRecord",
+      "description": "Stores agency clients and balances."
+    },
+    "/shipments/{shipmentId}": {
+      "schema": "ShipmentRecord",
+      "description": "Stores client shipments and tracking status."
+    },
+    "/containers/{containerId}": {
+      "schema": "ContainerRecord",
+      "description": "Stores shipping containers and financials."
+    },
+    "/payments/{paymentId}": {
+      "schema": "PaymentRecord",
+      "description": "Stores recorded payments."
+    },
+    "/unmatched/{unmatchedId}": {
+      "schema": "UnmatchedRecord",
+      "description": "Stores unmatched warehouse cargo."
+    }
+  }
+}

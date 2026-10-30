@@ -1,0 +1,15 @@
+:root {
+  --ink: #0E1116;
+  --bg: #F6F7F9;
+  --surface: #FFFFFF;
+  --muted: #7A818C;
+  --accent: #4F46E5;
+  --accent-tint: #EEF0FF;
+  --field: #F0F2F5;
+  --placeholder: #A3A9B3;
+  --alert: #D64545;
+  --alert-tint: #FBEAEA;
+  --shadow-subtle: 0 1px 2px rgba(14, 17, 22, 0.06);
+  --shadow-sheet: 0 -4px 20px rgba(14, 17, 22, 0.12);
+  --shadow-dialog: 0 10px 30px rgba(14, 17, 22, 0.18);
+}

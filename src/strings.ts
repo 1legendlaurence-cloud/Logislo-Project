@@ -1,0 +1,53 @@
+export const strings = {
+  appName: "Logislo",
+  // Common
+  save: "Save",
+  cancel: "Cancel",
+  done: "Done",
+  confirm: "Confirm",
+  create: "Create",
+  back: "Back",
+  search: "Search",
+  edit: "Edit",
+  copy: "Copy",
+  share: "Share",
+  upgrade: "Upgrade",
+  notNow: "Not now",
+  close: "Close",
+  current: "Current",
+  pro: "Pro",
+  soon: "Soon",
+  all: "All",
+  open: "Open",
+  active: "Active",
+  cleared: "Cleared",
+  notCleared: "Not cleared",
+  notFound: "Not found",
+  unmatched: "Unmatched",
+  noConnection: "No connection",
+  linkNotValid: "Link not valid",
+
+  // Roles
+  owner: "Owner",
+  manager: "Manager",
+  frontDesk: "Front desk",
+  warehouse: "Warehouse worker",
+
+  // Navigation
+  home: "Home",
+  clients: "Clients",
+  scan: "Scan",
+  shipments: "Shipments",
+  payments: "Payments",
+  containers: "Containers",
+  more: "More",
+  warehouseList: "Warehouse list",
+  dashboard: "Dashboard",
+  tools: "Tools",
+  settings: "Settings",
+  profile: "Profile",
+  logout: "Log out",
+
+  // Currency
+  currency: "FCFA",
+};

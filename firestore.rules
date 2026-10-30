@@ -1,0 +1,243 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(ownerId) {
+      return isAuthenticated() && request.auth.uid == ownerId;
+    }
+
+    function isAgencyMember(ownerId) {
+      return isAuthenticated() && (
+        request.auth.uid == ownerId ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.agencyId == ownerId
+        )
+      );
+    }
+
+    function isValidString(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isValidOptionalString(data, field, maxLen) {
+      return !(field in data) || (data[field] is string && data[field].size() <= maxLen);
+    }
+
+    function isValidOptionalNumber(data, field) {
+      return !(field in data) || (data[field] is number);
+    }
+
+    function isValidOptionalBoolean(data, field) {
+      return !(field in data) || (data[field] is bool);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['ownerId', 'name', 'email', 'agencyName', 'currency', 'role', 'plan']) &&
+             data.keys().hasOnly(['ownerId', 'agencyId', 'name', 'email', 'whatsapp', 'agencyName', 'agencyLogoUrl', 'whiteLabelEnabled', 'currency', 'role', 'plan', 'waitlistJoined']) &&
+             isValidString(data.ownerId, 1, 128) &&
+             isValidOptionalString(data, 'agencyId', 128) &&
+             isValidString(data.name, 1, 120) &&
+             isValidString(data.email, 1, 160) &&
+             isValidOptionalString(data, 'whatsapp', 40) &&
+             isValidString(data.agencyName, 1, 120) &&
+             isValidOptionalString(data, 'agencyLogoUrl', 150000) &&
+             isValidOptionalBoolean(data, 'whiteLabelEnabled') &&
+             isValidString(data.currency, 1, 16) &&
+             data.role in ['Owner', 'Manager', 'Front desk', 'Warehouse worker'] &&
+             data.plan in ['Basic', 'Pro'] &&
+             isValidOptionalBoolean(data, 'waitlistJoined');
+    }
+
+    function isValidRouteConfig(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'name', 'fromCountry', 'fromCity', 'toCountry', 'toCity', 'pricePerKg', 'pricePerCbm', 'depositPct']) &&
+             data.keys().hasOnly(['id', 'ownerId', 'name', 'fromCountry', 'fromCity', 'toCountry', 'toCity', 'pricePerKg', 'pricePerCbm', 'depositPct', 'gzFreeDays', 'gzDailyFee', 'dlaFreeDays', 'dlaDailyFee']) &&
+             isValidString(data.id, 1, 128) &&
+             isValidString(data.ownerId, 1, 128) &&
+             isValidString(data.name, 1, 120) &&
+             isValidString(data.fromCountry, 1, 64) &&
+             isValidString(data.fromCity, 1, 64) &&
+             isValidString(data.toCountry, 1, 64) &&
+             isValidString(data.toCity, 1, 64) &&
+             data.pricePerKg is number && data.pricePerKg >= 0 &&
+             data.pricePerCbm is number && data.pricePerCbm >= 0 &&
+             data.depositPct is number && data.depositPct >= 0 && data.depositPct <= 100 &&
+             isValidOptionalNumber(data, 'gzFreeDays') &&
+             isValidOptionalNumber(data, 'gzDailyFee') &&
+             isValidOptionalNumber(data, 'dlaFreeDays') &&
+             isValidOptionalNumber(data, 'dlaDailyFee');
+    }
+
+    function isValidStaffMember(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'name', 'role', 'office', 'whatsapp', 'email', 'status']) &&
+             data.keys().hasOnly(['id', 'ownerId', 'agencyName', 'name', 'role', 'office', 'whatsapp', 'email', 'customTitle', 'status', 'tempPassword']) &&
+             isValidString(data.id, 1, 128) &&
+             isValidString(data.ownerId, 1, 128) &&
+             isValidOptionalString(data, 'agencyName', 120) &&
+             isValidString(data.name, 1, 120) &&
+             data.role in ['Owner', 'Manager', 'Front desk', 'Warehouse worker'] &&
+             isValidString(data.office, 1, 64) &&
+             isValidString(data.whatsapp, 1, 40) &&
+             isValidString(data.email, 1, 160) &&
+             isValidOptionalString(data, 'customTitle', 80) &&
+             data.status in ['Active', 'Inactive'] &&
+             isValidOptionalString(data, 'tempPassword', 32);
+    }
+
+    function isValidClientRecord(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'name', 'code', 'city', 'whatsapp', 'shipmentCount', 'balance']) &&
+             data.keys().hasOnly(['id', 'ownerId', 'name', 'code', 'city', 'whatsapp', 'email', 'shipmentCount', 'balance']) &&
+             isValidString(data.id, 1, 128) &&
+             isValidString(data.ownerId, 1, 128) &&
+             isValidString(data.name, 1, 120) &&
+             isValidString(data.code, 1, 32) &&
+             isValidString(data.city, 1, 64) &&
+             isValidString(data.whatsapp, 1, 40) &&
+             isValidOptionalString(data, 'email', 160) &&
+             data.shipmentCount is number &&
+             data.balance is number;
+    }
+
+    function isValidShipmentRecord(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'clientName', 'clientCode', 'route', 'boxes', 'status', 'trackingLink', 'shippingFee', 'depositFee', 'storageFee', 'balance']) &&
+             data.keys().hasOnly(['id', 'ownerId', 'agencyName', 'agencyLogoUrl', 'whiteLabelEnabled', 'clientName', 'clientCode', 'route', 'boxes', 'cbm', 'weightKg', 'status', 'description', 'supplierTracking', 'trackingLink', 'shippingFee', 'depositFee', 'storageFee', 'balance', 'collectorName', 'dateLabel']) &&
+             isValidString(data.id, 1, 128) &&
+             isValidString(data.ownerId, 1, 128) &&
+             isValidOptionalString(data, 'agencyName', 120) &&
+             isValidOptionalString(data, 'agencyLogoUrl', 150000) &&
+             isValidOptionalBoolean(data, 'whiteLabelEnabled') &&
+             isValidString(data.clientName, 1, 120) &&
+             isValidString(data.clientCode, 1, 32) &&
+             isValidString(data.route, 1, 120) &&
+             data.boxes is number && data.boxes >= 0 &&
+             isValidOptionalNumber(data, 'cbm') &&
+             isValidOptionalNumber(data, 'weightKg') &&
+             isValidString(data.status, 1, 32) &&
+             isValidOptionalString(data, 'description', 240) &&
+             isValidOptionalString(data, 'supplierTracking', 80) &&
+             isValidString(data.trackingLink, 1, 240) &&
+             data.shippingFee is number &&
+             data.depositFee is number &&
+             data.storageFee is number &&
+             data.balance is number &&
+             isValidOptionalString(data, 'collectorName', 120) &&
+             isValidOptionalString(data, 'dateLabel', 64);
+    }
+
+    function isValidContainerRecord(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'number', 'size', 'route', 'boxes', 'status']) &&
+             data.keys().hasOnly(['id', 'ownerId', 'number', 'size', 'route', 'boxes', 'status', 'cost', 'profit', 'shipmentIds']) &&
+             isValidString(data.id, 1, 128) &&
+             isValidString(data.ownerId, 1, 128) &&
+             isValidString(data.number, 1, 64) &&
+             data.size in ['20ft', '40ft'] &&
+             isValidString(data.route, 1, 120) &&
+             data.boxes is number && data.boxes >= 0 &&
+             data.status in ['Open', 'In transit', 'Arrived'] &&
+             isValidOptionalNumber(data, 'cost') &&
+             isValidOptionalNumber(data, 'profit') &&
+             isValidOptionalString(data, 'shipmentIds', 1000);
+    }
+
+    function isValidPaymentRecord(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'shipmentId', 'type', 'method', 'amount', 'date', 'recordedBy']) &&
+             data.keys().hasOnly(['id', 'ownerId', 'shipmentId', 'clientName', 'type', 'method', 'amount', 'remaining', 'date', 'recordedBy', 'reference']) &&
+             isValidString(data.id, 1, 128) &&
+             isValidString(data.ownerId, 1, 128) &&
+             isValidString(data.shipmentId, 1, 128) &&
+             isValidOptionalString(data, 'clientName', 120) &&
+             data.type in ['Deposit', 'Balance', 'Storage', 'Paid', 'Credit'] &&
+             data.method in ['Cash', 'Mobile money'] &&
+             data.amount is number &&
+             isValidOptionalNumber(data, 'remaining') &&
+             isValidString(data.date, 1, 64) &&
+             isValidString(data.recordedBy, 1, 80) &&
+             isValidOptionalString(data, 'reference', 120);
+    }
+
+    function isValidUnmatchedRecord(data) {
+      return data.keys().hasAll(['id', 'ownerId', 'boxes', 'date']) &&
+             data.keys().hasOnly(['id', 'ownerId', 'boxes', 'cbm', 'weightKg', 'date', 'route', 'markings']) &&
+             isValidString(data.id, 1, 128) &&
+             isValidString(data.ownerId, 1, 128) &&
+             data.boxes is number && data.boxes >= 0 &&
+             isValidOptionalNumber(data, 'cbm') &&
+             isValidOptionalNumber(data, 'weightKg') &&
+             isValidString(data.date, 1, 64) &&
+             isValidOptionalString(data, 'route', 120) &&
+             isValidOptionalString(data, 'markings', 500);
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUserProfile(request.resource.data) && request.resource.data.ownerId == userId;
+      allow update: if isOwner(userId) && isValidUserProfile(request.resource.data) && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isOwner(userId);
+    }
+
+    match /routes/{routeId} {
+      allow read: if isAgencyMember(resource.data.ownerId);
+      allow create: if isAgencyMember(request.resource.data.ownerId) && isValidRouteConfig(request.resource.data);
+      allow update: if isAgencyMember(resource.data.ownerId) && isValidRouteConfig(request.resource.data) && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isAgencyMember(resource.data.ownerId);
+    }
+
+    match /staff/{staffId} {
+      // Allow authenticated users to query staff during Join Agency lookup or within their agency
+      allow read: if isAuthenticated();
+      allow create: if isAgencyMember(request.resource.data.ownerId) && isValidStaffMember(request.resource.data);
+      allow update: if isAgencyMember(resource.data.ownerId) && isValidStaffMember(request.resource.data) && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isAgencyMember(resource.data.ownerId);
+    }
+
+    match /clients/{clientId} {
+      allow read: if isAgencyMember(resource.data.ownerId);
+      allow create: if isAgencyMember(request.resource.data.ownerId) && isValidClientRecord(request.resource.data);
+      allow update: if isAgencyMember(resource.data.ownerId) && isValidClientRecord(request.resource.data) && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isAgencyMember(resource.data.ownerId);
+    }
+
+    match /shipments/{shipmentId} {
+      // Public tracking read allowed so clients can track their shipment status
+      allow read: if true;
+      allow create: if isAgencyMember(request.resource.data.ownerId) && isValidShipmentRecord(request.resource.data);
+      allow update: if isAgencyMember(resource.data.ownerId) && isValidShipmentRecord(request.resource.data) && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isAgencyMember(resource.data.ownerId);
+    }
+
+    match /containers/{containerId} {
+      allow read: if isAgencyMember(resource.data.ownerId);
+      allow create: if isAgencyMember(request.resource.data.ownerId) && isValidContainerRecord(request.resource.data);
+      allow update: if isAgencyMember(resource.data.ownerId) && isValidContainerRecord(request.resource.data) && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isAgencyMember(resource.data.ownerId);
+    }
+
+    match /payments/{paymentId} {
+      allow read: if isAgencyMember(resource.data.ownerId);
+      allow create: if isAgencyMember(request.resource.data.ownerId) && isValidPaymentRecord(request.resource.data);
+      allow update: if isAgencyMember(resource.data.ownerId) && isValidPaymentRecord(request.resource.data) && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isAgencyMember(resource.data.ownerId);
+    }
+
+    match /unmatched/{unmatchedId} {
+      allow read: if isAgencyMember(resource.data.ownerId);
+      allow create: if isAgencyMember(request.resource.data.ownerId) && isValidUnmatchedRecord(request.resource.data);
+      allow update: if isAgencyMember(resource.data.ownerId) && isValidUnmatchedRecord(request.resource.data) && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isAgencyMember(resource.data.ownerId);
+    }
+  }
+}
