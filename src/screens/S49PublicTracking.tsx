@@ -114,53 +114,53 @@ export const S49PublicTracking: React.FC = () => {
 
   return (
     <ScreenLayout hasHeader={false} hasNav={false}>
-      <div className="flex flex-col gap-4 pt-4 pb-6 min-h-full select-none justify-between">
+      <div className="flex flex-col gap-5 pt-8 pb-6 min-h-full select-none justify-between">
         <div className="flex flex-col gap-4">
-          {/* Minimal Header */}
-          <div className="flex items-center justify-between pb-1">
-            <div className="flex items-center gap-2">
-              <Logo size={22} showWordmark={true} />
-              <span className="text-[12px] font-semibold text-[var(--muted)] px-2 py-0.5 rounded-full bg-[var(--field)]">
-                Track
-              </span>
-            </div>
+          {/* Big Display Title & Subtext - No Top Nav Bar */}
+          <div className="flex flex-col gap-1.5 pt-2">
+            <h1 className="text-[28px] font-extrabold tracking-tight text-[var(--ink)] leading-tight">
+              Track your shipment
+            </h1>
+            <p className="text-[14px] text-[var(--muted)] leading-relaxed">
+              Enter your tracking number below to check real-time cargo status.
+            </p>
           </div>
 
-          {/* Minimalist Search Bar */}
-          <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <div
-                className="flex-1 h-12 px-3.5 rounded-[16px] flex items-center gap-2.5 border border-[var(--field)]"
-                style={{ backgroundColor: "var(--surface)" }}
-              >
-                <Icon name="search" size={18} color="var(--muted)" />
-                <input
-                  type="text"
-                  value={queryInput}
-                  onChange={(e) => setQueryInput(e.target.value)}
-                  placeholder="Enter tracking ID (e.g. SHP-1001)"
-                  autoCapitalize="characters"
-                  autoComplete="off"
-                  className="bg-transparent border-none outline-none w-full text-[15px] font-semibold text-[var(--ink)] placeholder:text-[var(--placeholder)]"
-                />
-                {queryInput && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setQueryInput("");
-                      setMatchedShipment(null);
-                      setHasSearched(false);
-                    }}
-                    className="p-1 text-[var(--muted)] hover:text-[var(--ink)] cursor-pointer"
-                  >
-                    <Icon name="close" size={14} />
-                  </button>
-                )}
-              </div>
+          {/* Minimalist Search Bar with Search Button INSIDE */}
+          <form onSubmit={handleSubmit} className="w-full">
+            <div
+              className="w-full h-[54px] pl-4 pr-1.5 rounded-[18px] flex items-center justify-between border border-[var(--field)] shadow-[0_2px_8px_rgba(0,0,0,0.04)] focus-within:border-[var(--accent)] transition-colors"
+              style={{ backgroundColor: "var(--surface)" }}
+            >
+              <input
+                type="text"
+                value={queryInput}
+                onChange={(e) => setQueryInput(e.target.value)}
+                placeholder="Enter shipment ID (e.g. SHP-1001)"
+                autoCapitalize="characters"
+                autoComplete="off"
+                className="bg-transparent border-none outline-none w-full text-[15px] font-semibold text-[var(--ink)] placeholder:text-[var(--placeholder)]"
+              />
+
+              {queryInput && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQueryInput("");
+                    setMatchedShipment(null);
+                    setHasSearched(false);
+                  }}
+                  className="p-1.5 mr-1 text-[var(--muted)] hover:text-[var(--ink)] cursor-pointer"
+                  title="Clear"
+                >
+                  <Icon name="close" size={14} />
+                </button>
+              )}
+
               <button
                 type="submit"
                 disabled={searching || !queryInput.trim()}
-                className="h-12 px-5 rounded-[16px] font-bold text-[14px] text-white cursor-pointer active:scale-95 transition-transform disabled:opacity-40"
+                className="h-[42px] px-5 rounded-[14px] font-bold text-[14px] text-white cursor-pointer active:scale-95 transition-transform shrink-0 disabled:opacity-40"
                 style={{ backgroundColor: "var(--accent)" }}
               >
                 {searching ? "..." : "Search"}
@@ -168,9 +168,9 @@ export const S49PublicTracking: React.FC = () => {
             </div>
           </form>
 
-          {/* Result Section */}
+          {/* Results Section */}
           {matchedShipment ? (
-            <div className="flex flex-col gap-3.5 mt-1">
+            <div className="flex flex-col gap-3.5 mt-2">
               {/* Company In Charge Banner - ONLY appears after shipment is found */}
               {companyName && (
                 <div
@@ -223,7 +223,7 @@ export const S49PublicTracking: React.FC = () => {
                   <StatusChip status={matchedShipment.status} />
                 </div>
 
-                <div className="flex flex-col gap-1 text-[13px] text-[var(--muted)] border-t border-[var(--field)] pt-3">
+                <div className="flex flex-col gap-1.5 text-[13px] text-[var(--muted)] border-t border-[var(--field)] pt-3">
                   <div className="flex items-center justify-between">
                     <span>Route</span>
                     <span className="font-semibold text-[var(--ink)]">
@@ -247,7 +247,7 @@ export const S49PublicTracking: React.FC = () => {
 
                   {matchedShipment.description && (
                     <div className="flex items-center justify-between">
-                      <span>Description</span>
+                      <span>Cargo / Description</span>
                       <span className="font-semibold text-[var(--ink)] truncate max-w-[200px]">
                         {matchedShipment.description}
                       </span>
@@ -256,7 +256,7 @@ export const S49PublicTracking: React.FC = () => {
                 </div>
               </div>
 
-              {/* Minimal Timeline */}
+              {/* Timeline */}
               <div
                 className="p-5 rounded-[20px] flex flex-col"
                 style={{
@@ -336,15 +336,6 @@ export const S49PublicTracking: React.FC = () => {
                 boxShadow: "var(--shadow-subtle)",
               }}
             >
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center mb-1"
-                style={{
-                  backgroundColor: "var(--accent-tint)",
-                  color: "var(--accent)",
-                }}
-              >
-                <Icon name="search" size={20} color="var(--accent)" />
-              </div>
               <h2 className="text-[17px] font-bold text-[var(--ink)]">
                 Shipment &ldquo;{searchedId}&rdquo; not found
               </h2>
@@ -352,29 +343,11 @@ export const S49PublicTracking: React.FC = () => {
                 Please verify your tracking code or ask your freight agency for a valid tracking link.
               </p>
             </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-16 text-center gap-2">
-              <div
-                className="w-14 h-14 rounded-full flex items-center justify-center mb-1"
-                style={{
-                  backgroundColor: "var(--surface)",
-                  boxShadow: "var(--shadow-subtle)",
-                }}
-              >
-                <Icon name="truck" size={24} color="var(--muted)" />
-              </div>
-              <h2 className="text-[16px] font-bold text-[var(--ink)]">
-                Track your shipment
-              </h2>
-              <p className="text-[13px] text-[var(--muted)] max-w-[240px] leading-relaxed">
-                Enter your shipment ID above to see live carrier status and location.
-              </p>
-            </div>
-          )}
+          ) : null}
         </div>
 
-        {/* Footer */}
-        <div className="flex flex-col items-center justify-center gap-1 pt-4">
+        {/* Footer: Powered by Logislo */}
+        <div className="flex flex-col items-center justify-center gap-1 pt-6 pb-2">
           {matchedShipment && isWhiteLabeled && companyName && (
             <span className="text-[12px] font-semibold text-[var(--ink)]">
               Official Tracking · {companyName}
