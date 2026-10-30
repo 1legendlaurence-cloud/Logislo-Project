@@ -369,7 +369,19 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       "Warehouse worker": [],
     };
   });
-  const [stack, setStack] = useState<string[]>(["00"]);
+  // Detect if the user is visiting via track.logislo.com or /track path
+  const isTrackingDomain = (() => {
+    if (typeof window === "undefined") return false;
+    const hostname = window.location.hostname.toLowerCase();
+    const pathname = window.location.pathname.toLowerCase();
+    return (
+      hostname.startsWith("track.") ||
+      pathname.startsWith("/track") ||
+      window.location.hash.startsWith("#/track")
+    );
+  })();
+
+  const [stack, setStack] = useState<string[]>(() => (isTrackingDomain ? ["49"] : ["00"]));
   const [offlineBanner, setOfflineBanner] = useState<boolean>(false);
   const [variant, setVariant] = useState<string | null>(null);
   const [moreSheetOpen, setMoreSheetOpen] = useState<boolean>(false);
@@ -416,10 +428,28 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [role]
   );
 
-  // Sync hash routing on mount / change
+  // Sync hostname and hash routing on mount / change
   useEffect(() => {
-    const checkHash = () => {
+    const checkRoute = () => {
+      const hostname = window.location.hostname.toLowerCase();
+      const pathname = window.location.pathname.toLowerCase();
       const hash = window.location.hash;
+
+      if (hostname.startsWith("track.") || pathname.startsWith("/track")) {
+        // Read tracking id from path (e.g. /track/SHP-1001), query, or hash
+        const pathPart = pathname.replace(/^\/track\/?/, "").trim();
+        const hashPart = hash.replace(/^#\/track\/?/, "").replace(/^#/, "").trim();
+        const params = new URLSearchParams(window.location.search);
+        const queryId = params.get("id") || params.get("tracking") || "";
+        const targetId = (pathPart || hashPart || queryId).toUpperCase();
+
+        if (targetId && targetId !== "INVALID") {
+          setSelectedShipmentId(targetId);
+        }
+        setStack(["49"]);
+        return;
+      }
+
       if (hash.startsWith("#/track/")) {
         const code = decodeURIComponent(hash.replace("#/track/", "")).trim();
         if (code && code !== "invalid") {
@@ -430,9 +460,13 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     };
-    checkHash();
-    window.addEventListener("hashchange", checkHash);
-    return () => window.removeEventListener("hashchange", checkHash);
+    checkRoute();
+    window.addEventListener("hashchange", checkRoute);
+    window.addEventListener("popstate", checkRoute);
+    return () => {
+      window.removeEventListener("hashchange", checkRoute);
+      window.removeEventListener("popstate", checkRoute);
+    };
   }, []);
 
   /**
