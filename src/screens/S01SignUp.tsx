@@ -19,7 +19,7 @@ export const S01SignUp: React.FC = () => {
       name: fullName.trim() || "Owner",
       email: email.trim() || "owner@company.com",
       whatsapp: whatsapp.trim() || "+237 6 00 00 00 00",
-      agencyName: agencyName.trim() || "Douala Express",
+      agencyName: agencyName.trim() || "My Agency",
       role: "Owner",
     });
     go("05");

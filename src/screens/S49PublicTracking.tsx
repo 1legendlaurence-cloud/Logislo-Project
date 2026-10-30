@@ -3,8 +3,7 @@ import { ScreenLayout } from "../components/ScreenLayout";
 import { Icon } from "../components/Icon";
 import { StatusChip } from "../components/Chip";
 import { Logo } from "../components/Logo";
-import { TrackingAndReceiptBrandHeader } from "../components/AgencyBrand";
-import { QrPlaceholder } from "../components/QrPlaceholder";
+import { AgencyLogoMark } from "../components/AgencyBrand";
 import { useDemo } from "../context/Demo";
 import { Shipment } from "../data/mock";
 
@@ -22,50 +21,72 @@ export const S49PublicTracking: React.FC = () => {
     shipments,
     selectedShipmentId,
     setSelectedShipmentId,
-    userProfile,
-    plan,
     routes,
-    back,
-    go,
     lookupPublicShipment,
   } = useDemo();
 
-  const currentShipment =
-    shipments.find((s) => s.id === selectedShipmentId) || shipments[0] || null;
-
-  const [queryInput, setQueryInput] = useState(
-    selectedShipmentId || currentShipment?.id || ""
-  );
-  const [searchedId, setSearchedId] = useState(
-    selectedShipmentId || currentShipment?.id || ""
-  );
-  const [remoteMatched, setRemoteMatched] = useState<Shipment | null>(null);
+  const [queryInput, setQueryInput] = useState(selectedShipmentId || "");
+  const [searchedId, setSearchedId] = useState(selectedShipmentId || "");
+  const [matchedShipment, setMatchedShipment] = useState<Shipment | null>(null);
   const [searching, setSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
+  // Auto-run lookup if a tracking ID was passed in URL or selection
   useEffect(() => {
-    if (selectedShipmentId) {
-      setQueryInput(selectedShipmentId);
-      setSearchedId(selectedShipmentId);
-    } else if (shipments[0]?.id && !searchedId) {
-      setQueryInput(shipments[0].id);
-      setSearchedId(shipments[0].id);
+    // Check URL parameters, pathname, or hash
+    const params = new URLSearchParams(window.location.search);
+    const urlId =
+      params.get("id") ||
+      params.get("tracking") ||
+      window.location.hash.replace("#/track/", "").replace("#", "") ||
+      "";
+
+    const targetId = (selectedShipmentId || urlId).trim();
+    if (targetId && targetId !== "invalid") {
+      setQueryInput(targetId);
+      setSearchedId(targetId);
+      handleExecuteSearch(targetId);
     }
-  }, [selectedShipmentId, shipments, searchedId]);
+  }, [selectedShipmentId]);
 
-  const localMatched = shipments.find(
-    (s) => s.id.toLowerCase() === searchedId.trim().toLowerCase()
-  );
-  const matchedShipment = localMatched || remoteMatched;
+  const handleExecuteSearch = async (trackingCode: string) => {
+    const cleaned = trackingCode.trim().toUpperCase();
+    if (!cleaned) return;
+    setSearchedId(cleaned);
+    setSearching(true);
+    setHasSearched(true);
 
-  // Determine Company in charge & White-labeling state
-  const companyInCharge =
-    matchedShipment?.agencyName || userProfile.agencyName || "Douala Express";
-  const companyLogoUrl =
-    matchedShipment?.agencyLogoUrl || userProfile.agencyLogoUrl;
-  const isWhiteLabeled = Boolean(
-    matchedShipment?.whiteLabelEnabled ??
-      (plan === "Pro" && userProfile.whiteLabelEnabled)
-  );
+    try {
+      // 1. Try local state first
+      const localMatch = shipments.find(
+        (s) => s.id.toUpperCase() === cleaned
+      );
+      if (localMatch) {
+        setMatchedShipment(localMatch);
+        setSelectedShipmentId(localMatch.id);
+        return;
+      }
+
+      // 2. Lookup in Firestore public collection
+      const remote = await lookupPublicShipment(cleaned);
+      setMatchedShipment(remote);
+      if (remote) {
+        setSelectedShipmentId(remote.id);
+      }
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleExecuteSearch(queryInput);
+  };
+
+  // Company in charge details are ONLY resolved from the specific shipment found
+  const companyName = matchedShipment?.agencyName?.trim() || "";
+  const companyLogoUrl = matchedShipment?.agencyLogoUrl;
+  const isWhiteLabeled = Boolean(matchedShipment?.whiteLabelEnabled);
 
   const matchedRoute = routes.find((r) => r.id === matchedShipment?.routeId);
   const routeParts = matchedShipment?.route
@@ -79,281 +100,279 @@ export const S49PublicTracking: React.FC = () => {
     ? matchedShipment.timeline
     : DEFAULT_STEPS;
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleaned = queryInput.trim().toUpperCase();
-    if (!cleaned) return;
-    setSearchedId(cleaned);
-    setSearching(true);
-    try {
-      const found = await lookupPublicShipment(cleaned);
-      setRemoteMatched(found);
-      if (found) {
-        setSelectedShipmentId(found.id);
-      }
-    } finally {
-      setSearching(false);
-    }
-  };
-
   return (
     <ScreenLayout hasHeader={false} hasNav={false}>
-      <div className="flex flex-col gap-4 pt-3 pb-6 select-none">
-        {/* Top bar with back option */}
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={back}
-            className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
-            style={{ backgroundColor: "var(--field)" }}
-            title="Back"
-          >
-            <Icon name="back" size={18} color="var(--ink)" />
-          </button>
-
-          <span className="text-[13px] font-bold tracking-wider uppercase text-[var(--muted)]">
-            Shipment Tracking
-          </span>
-
-          <div className="w-9" />
-        </div>
-
-        {/* Brand Header:
-            - On Basic Plan: Shows Our Logislo Logo prominently + Company in charge of shipment
-            - On Pro Plan (White-labeled): Shows Agency's own Logo instead of Logislo's logo */}
-        <TrackingAndReceiptBrandHeader
-          agencyName={companyInCharge}
-          agencyLogoUrl={companyLogoUrl}
-          isWhiteLabeled={isWhiteLabeled}
-          subtitle="Company in charge of shipment"
-        />
-
-        {/* Tracking Search Bar */}
-        <form onSubmit={handleSearch} className="flex items-center gap-2">
-          <div
-            className="flex-1 h-11 px-3.5 rounded-[14px] flex items-center gap-2.5"
-            style={{ backgroundColor: "var(--field)" }}
-          >
-            <Icon name="search" size={16} color="var(--muted)" />
-            <input
-              type="text"
-              value={queryInput}
-              onChange={(e) => setQueryInput(e.target.value)}
-              placeholder="Enter tracking ID (e.g. SHP-1001)"
-              className="bg-transparent border-none outline-none w-full text-[14px] font-semibold text-[var(--ink)] placeholder:text-[var(--placeholder)]"
-            />
+      <div className="flex flex-col gap-4 pt-4 pb-6 min-h-full select-none justify-between">
+        <div className="flex flex-col gap-4">
+          {/* Minimal Header */}
+          <div className="flex items-center justify-between pb-1">
+            <div className="flex items-center gap-2">
+              <Logo size={22} showWordmark={true} />
+              <span className="text-[12px] font-semibold text-[var(--muted)] px-2 py-0.5 rounded-full bg-[var(--field)]">
+                Track
+              </span>
+            </div>
           </div>
-          <button
-            type="submit"
-            disabled={searching}
-            className="h-11 px-4 rounded-[14px] font-semibold text-[13px] text-white cursor-pointer active:scale-95 transition-transform"
-            style={{ backgroundColor: "var(--accent)" }}
-          >
-            {searching ? "..." : "Track"}
-          </button>
-        </form>
 
-        {/* Quick shipment pills when shipments exist in workspace */}
-        {shipments.length > 0 && (
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-            {shipments.slice(0, 6).map((s) => {
-              const active = matchedShipment?.id === s.id;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => {
-                    setQueryInput(s.id);
-                    setSearchedId(s.id);
-                    setSelectedShipmentId(s.id);
-                  }}
-                  className="px-2.5 py-1 rounded-full text-[11px] font-semibold shrink-0 cursor-pointer transition-colors"
+          {/* Minimalist Search Bar */}
+          <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <div
+                className="flex-1 h-12 px-3.5 rounded-[16px] flex items-center gap-2.5 border border-[var(--field)]"
+                style={{ backgroundColor: "var(--surface)" }}
+              >
+                <Icon name="search" size={18} color="var(--muted)" />
+                <input
+                  type="text"
+                  value={queryInput}
+                  onChange={(e) => setQueryInput(e.target.value)}
+                  placeholder="Enter tracking ID (e.g. SHP-1001)"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  className="bg-transparent border-none outline-none w-full text-[15px] font-semibold text-[var(--ink)] placeholder:text-[var(--placeholder)]"
+                />
+                {queryInput && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQueryInput("");
+                      setMatchedShipment(null);
+                      setHasSearched(false);
+                    }}
+                    className="p-1 text-[var(--muted)] hover:text-[var(--ink)] cursor-pointer"
+                  >
+                    <Icon name="close" size={14} />
+                  </button>
+                )}
+              </div>
+              <button
+                type="submit"
+                disabled={searching || !queryInput.trim()}
+                className="h-12 px-5 rounded-[16px] font-bold text-[14px] text-white cursor-pointer active:scale-95 transition-transform disabled:opacity-40"
+                style={{ backgroundColor: "var(--accent)" }}
+              >
+                {searching ? "..." : "Search"}
+              </button>
+            </div>
+          </form>
+
+          {/* Result Section */}
+          {matchedShipment ? (
+            <div className="flex flex-col gap-3.5 mt-1">
+              {/* Company In Charge Banner - ONLY appears after shipment is found */}
+              {companyName && (
+                <div
+                  className="p-4 rounded-[18px] flex items-center justify-between gap-3"
                   style={{
-                    backgroundColor: active
-                      ? "var(--accent-tint)"
-                      : "var(--field)",
-                    color: active ? "var(--accent)" : "var(--muted)",
+                    backgroundColor: "var(--surface)",
+                    boxShadow: "var(--shadow-subtle)",
                   }}
                 >
-                  {s.id}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {matchedShipment ? (
-          <>
-            {/* Shipment Summary Card */}
-            <div
-              className="p-5 rounded-[20px] flex items-center justify-between gap-3"
-              style={{
-                backgroundColor: "var(--surface)",
-                boxShadow: "var(--shadow-subtle)",
-              }}
-            >
-              <div className="flex flex-col gap-1.5 min-w-0">
-                <div className="flex items-center gap-2.5">
-                  <h1 className="text-[24px] font-extrabold tracking-tight text-[var(--ink)] leading-none">
-                    {matchedShipment.id}
-                  </h1>
-                  <StatusChip status={matchedShipment.status} />
-                </div>
-
-                <span className="text-[13px] font-semibold text-[var(--ink)] truncate">
-                  Client: {matchedShipment.clientName} ({matchedShipment.clientCode})
-                </span>
-
-                <div className="flex items-center gap-1.5 text-[13px] text-[var(--muted)]">
-                  <span>{fromCity}</span>
-                  <Icon name="arrow-right" size={13} color="var(--muted)" />
-                  <span>{toCity}</span>
-                  <span>
-                    · {matchedShipment.boxes} boxes ({matchedShipment.cbm ?? 1} CBM)
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-1.5 rounded-[12px] bg-white border border-[var(--field)] shrink-0">
-                <QrPlaceholder
-                  size={64}
-                  value={
-                    matchedShipment.trackingLink ||
-                    `https://track.logislo.com/${matchedShipment.id}`
-                  }
-                />
-              </div>
-            </div>
-
-            {/* Vertical Stepper Card */}
-            <div
-              className="p-6 rounded-[20px] flex flex-col"
-              style={{
-                backgroundColor: "var(--surface)",
-                boxShadow: "var(--shadow-subtle)",
-              }}
-            >
-              {steps.map((step, i) => {
-                const isLast = i === steps.length - 1;
-                return (
-                  <div key={step.status} className="flex gap-4 relative">
-                    {/* Vertical connector line */}
-                    {!isLast && (
-                      <div
-                        className="absolute left-[13px] top-[28px] bottom-[-8px] w-[2px]"
-                        style={{
-                          backgroundColor: step.completed
-                            ? "var(--accent)"
-                            : "var(--field)",
-                        }}
-                      />
-                    )}
-
-                    {/* Circle indicator */}
-                    <div
-                      className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 z-10 ${
-                        step.current ? "ring-4 ring-[var(--accent-tint)]" : ""
-                      }`}
-                      style={{
-                        backgroundColor:
-                          step.completed || step.current
-                            ? "var(--accent)"
-                            : "var(--field)",
-                      }}
-                    >
-                      {step.completed ? (
-                        <Icon name="check" size={14} color="#FFFFFF" />
-                      ) : (
-                        <div
-                          className="w-2.5 h-2.5 rounded-full"
-                          style={{
-                            backgroundColor: step.current
-                              ? "#FFFFFF"
-                              : "var(--placeholder)",
-                          }}
-                        />
-                      )}
-                    </div>
-
-                    {/* Text Content */}
-                    <div
-                      className={`flex items-center justify-between flex-1 ${
-                        !isLast ? "pb-6" : "pb-1"
-                      }`}
-                    >
-                      <span
-                        className={`text-[15px] ${
-                          step.current
-                            ? "font-bold text-[var(--accent)]"
-                            : step.completed
-                            ? "font-semibold text-[var(--ink)]"
-                            : "font-normal text-[var(--muted)]"
-                        }`}
-                      >
-                        {step.status}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <AgencyLogoMark
+                      agencyName={companyName}
+                      logoUrl={companyLogoUrl}
+                      size={40}
+                    />
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                        Company in charge of shipment
                       </span>
-
-                      <span className="text-[13px] text-[var(--muted)]">
-                        {step.date}
+                      <span className="text-[16px] font-extrabold text-[var(--ink)] tracking-tight truncate">
+                        {companyName}
                       </span>
                     </div>
                   </div>
-                );
-              })}
+
+                  <span
+                    className="px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0"
+                    style={{
+                      backgroundColor: "var(--accent-tint)",
+                      color: "var(--accent)",
+                    }}
+                  >
+                    Carrier
+                  </span>
+                </div>
+              )}
+
+              {/* Shipment Details Card */}
+              <div
+                className="p-5 rounded-[20px] flex flex-col gap-3"
+                style={{
+                  backgroundColor: "var(--surface)",
+                  boxShadow: "var(--shadow-subtle)",
+                }}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[22px] font-extrabold tracking-tight text-[var(--ink)]">
+                    {matchedShipment.id}
+                  </span>
+                  <StatusChip status={matchedShipment.status} />
+                </div>
+
+                <div className="flex flex-col gap-1 text-[13px] text-[var(--muted)] border-t border-[var(--field)] pt-3">
+                  <div className="flex items-center justify-between">
+                    <span>Route</span>
+                    <span className="font-semibold text-[var(--ink)]">
+                      {fromCity} → {toCity}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span>Packages</span>
+                    <span className="font-semibold text-[var(--ink)]">
+                      {matchedShipment.boxes} box
+                      {matchedShipment.boxes > 1 ? "es" : ""}
+                      {matchedShipment.cbm
+                        ? ` · ${matchedShipment.cbm} CBM`
+                        : ""}
+                      {matchedShipment.weightKg
+                        ? ` · ${matchedShipment.weightKg} kg`
+                        : ""}
+                    </span>
+                  </div>
+
+                  {matchedShipment.description && (
+                    <div className="flex items-center justify-between">
+                      <span>Description</span>
+                      <span className="font-semibold text-[var(--ink)] truncate max-w-[200px]">
+                        {matchedShipment.description}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Minimal Timeline */}
+              <div
+                className="p-5 rounded-[20px] flex flex-col"
+                style={{
+                  backgroundColor: "var(--surface)",
+                  boxShadow: "var(--shadow-subtle)",
+                }}
+              >
+                {steps.map((step, i) => {
+                  const isLast = i === steps.length - 1;
+                  return (
+                    <div key={step.status} className="flex gap-3.5 relative">
+                      {!isLast && (
+                        <div
+                          className="absolute left-[11px] top-[24px] bottom-[-6px] w-[2px]"
+                          style={{
+                            backgroundColor: step.completed
+                              ? "var(--accent)"
+                              : "var(--field)",
+                          }}
+                        />
+                      )}
+
+                      <div
+                        className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10"
+                        style={{
+                          backgroundColor:
+                            step.completed || step.current
+                              ? "var(--accent)"
+                              : "var(--field)",
+                        }}
+                      >
+                        {step.completed ? (
+                          <Icon name="check" size={13} color="#FFFFFF" />
+                        ) : (
+                          <div
+                            className="w-2 h-2 rounded-full"
+                            style={{
+                              backgroundColor: step.current
+                                ? "#FFFFFF"
+                                : "var(--placeholder)",
+                            }}
+                          />
+                        )}
+                      </div>
+
+                      <div
+                        className={`flex items-center justify-between flex-1 ${
+                          !isLast ? "pb-5" : "pb-0.5"
+                        }`}
+                      >
+                        <span
+                          className={`text-[14px] ${
+                            step.current
+                              ? "font-bold text-[var(--accent)]"
+                              : step.completed
+                              ? "font-semibold text-[var(--ink)]"
+                              : "font-normal text-[var(--muted)]"
+                          }`}
+                        >
+                          {step.status}
+                        </span>
+
+                        <span className="text-[12px] text-[var(--muted)]">
+                          {step.date}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </>
-        ) : (
-          <div
-            className="p-6 rounded-[20px] flex flex-col items-center text-center gap-3 mt-1"
-            style={{
-              backgroundColor: "var(--surface)",
-              boxShadow: "var(--shadow-subtle)",
-            }}
-          >
+          ) : hasSearched && searchedId ? (
             <div
-              className="w-14 h-14 rounded-full flex items-center justify-center"
+              className="p-8 rounded-[20px] flex flex-col items-center text-center gap-2 mt-4"
               style={{
-                backgroundColor: "var(--accent-tint)",
-                color: "var(--accent)",
+                backgroundColor: "var(--surface)",
+                boxShadow: "var(--shadow-subtle)",
               }}
             >
-              <Icon name="search" size={24} color="var(--accent)" />
-            </div>
-            <h2 className="text-[18px] font-bold text-[var(--ink)]">
-              {searchedId
-                ? `Shipment "${searchedId}" not found`
-                : "Enter a shipment ID to track"}
-            </h2>
-            <p className="text-[13px] text-[var(--muted)] leading-relaxed max-w-[250px]">
-              {shipments.length === 0
-                ? "No shipments have been created yet. Create a new pre-alert in the app to generate your first tracking ID (SHP-1001)."
-                : "Check the tracking code on your receipt or ask your freight agency for a valid tracking link."}
-            </p>
-            {shipments.length === 0 && (
-              <button
-                type="button"
-                onClick={() => go("24")}
-                className="mt-1 px-4 py-2 rounded-full text-[12px] font-semibold text-white cursor-pointer"
-                style={{ backgroundColor: "var(--accent)" }}
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center mb-1"
+                style={{
+                  backgroundColor: "var(--accent-tint)",
+                  color: "var(--accent)",
+                }}
               >
-                Create first pre-alert →
-              </button>
-            )}
-          </div>
-        )}
+                <Icon name="search" size={20} color="var(--accent)" />
+              </div>
+              <h2 className="text-[17px] font-bold text-[var(--ink)]">
+                Shipment &ldquo;{searchedId}&rdquo; not found
+              </h2>
+              <p className="text-[13px] text-[var(--muted)] max-w-[260px] leading-relaxed">
+                Please verify your tracking code or ask your freight agency for a valid tracking link.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 text-center gap-2">
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center mb-1"
+                style={{
+                  backgroundColor: "var(--surface)",
+                  boxShadow: "var(--shadow-subtle)",
+                }}
+              >
+                <Icon name="truck" size={24} color="var(--muted)" />
+              </div>
+              <h2 className="text-[16px] font-bold text-[var(--ink)]">
+                Track your shipment
+              </h2>
+              <p className="text-[13px] text-[var(--muted)] max-w-[240px] leading-relaxed">
+                Enter your shipment ID above to see live carrier status and location.
+              </p>
+            </div>
+          )}
+        </div>
 
-        {/* Footer Attribution */}
-        <div className="flex items-center justify-center pt-1">
-          {isWhiteLabeled ? (
-            <span className="text-[12px] font-semibold text-[var(--muted)]">
-              Official Tracking Portal · {companyInCharge}
+        {/* Footer */}
+        <div className="flex items-center justify-center pt-4">
+          {matchedShipment && isWhiteLabeled && companyName ? (
+            <span className="text-[12px] font-medium text-[var(--muted)]">
+              {companyName} Tracking
             </span>
           ) : (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 opacity-60">
               <span className="text-[12px] font-medium text-[var(--muted)]">
                 Powered by
               </span>
-              <Logo size={16} showWordmark={true} />
+              <Logo size={14} showWordmark={true} />
             </div>
           )}
         </div>

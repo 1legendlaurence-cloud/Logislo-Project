@@ -43,17 +43,6 @@ export const S02Login: React.FC = () => {
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between pt-1">
             <Logo size={24} showWordmark={true} />
-            <button
-              type="button"
-              onClick={() => go("49")}
-              className="px-3 py-1.5 rounded-full text-[12px] font-semibold cursor-pointer active:scale-95 transition-transform"
-              style={{
-                backgroundColor: "var(--accent-tint)",
-                color: "var(--accent)",
-              }}
-            >
-              Track goods →
-            </button>
           </div>
 
           <h1 className="text-[26px] font-extrabold tracking-tight text-[var(--ink)] leading-none pt-1">

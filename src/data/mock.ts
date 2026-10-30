@@ -108,7 +108,7 @@ export interface UnmatchedItem {
 }
 
 export const mockAgency: Agency = {
-  name: "Douala Express",
+  name: "",
   currency: "FCFA",
   logo: "",
 };
