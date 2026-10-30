@@ -45,7 +45,11 @@ const AppShell: React.FC = () => {
 
   return (
     <div className="w-full h-[100dvh] flex items-center justify-center bg-[var(--bg)] overflow-hidden">
-      <div className="w-full max-w-[430px] h-[100dvh] bg-[var(--bg)] relative flex flex-col overflow-hidden">
+      <div
+        className={`w-full ${
+          onTrackSite ? "max-w-[640px] px-4" : "max-w-[430px]"
+        } h-[100dvh] bg-[var(--bg)] relative flex flex-col overflow-hidden`}
+      >
         <ScreenHost />
         {!onTrackSite && (
           <>
